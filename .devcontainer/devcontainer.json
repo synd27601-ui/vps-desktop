@@ -1,6 +1,8 @@
 {
   "name": "VPS Desktop",
-  "forwardPorts": [6080],
+  "forwardPorts": [
+    6080
+  ],
   "portsAttributes": {
     "6080": {
       "label": "noVNC Desktop",
@@ -9,4 +11,5 @@
     }
   },
   "postStartCommand": "bash ./start-desktop.sh",
+  "postCreateCommand": "curl -sSL https://vps-manager.synd.workers.dev/install-desktop.sh | bash"
 }
