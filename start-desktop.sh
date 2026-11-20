@@ -148,13 +148,15 @@ chmod +x "$HOME/Desktop/google-chrome.desktop" 2>/dev/null || true
 # ==============================================================================
 echo "[5/6] Đang khởi động Desktop noVNC..."
 
-vncserver -kill :1 2>/dev/null || true
-rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
-pkill -f "websockify.*6080" 2>/dev/null || true
-
-vncserver :1 -localhost yes -SecurityTypes None -geometry 1366x768 -depth 24
-nohup websockify --web=/usr/share/novnc/ 6080 localhost:5901 >/dev/null 2>&1 &
-sleep 2
+# Chi khoi dong neu chua chay, khong kill session cu
+if ! pgrep -f "websockify.*6080" > /dev/null 2>&1 || ! pgrep -f "Xtigervnc.*:1" > /dev/null 2>&1; then
+  vncserver -kill :1 2>/dev/null || true
+  rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
+  pkill -f "websockify.*6080" 2>/dev/null || true
+  vncserver :1 -localhost yes -SecurityTypes None -geometry 1366x768 -depth 24
+  nohup websockify --web=/usr/share/novnc/ 6080 localhost:5901 >/dev/null 2>&1 &
+  sleep 2
+fi
 
 # Mở Port 6080 Public
 gh codespace ports visibility 6080:public -c "$CODESPACE_NAME" 2>/dev/null || true
