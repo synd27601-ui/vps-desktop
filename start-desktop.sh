@@ -40,14 +40,16 @@ fi
 # ==============================================================================
 echo "[3/6] Đang tải FB Manager Extension..."
 mkdir -p "$EXT_DIR"
-wget -q -O /tmp/fb-manager-ext.zip "$EXT_URL" 2>/dev/null
-if [ -f /tmp/fb-manager-ext.zip ] && [ "$(stat -c%s /tmp/fb-manager-ext.zip 2>/dev/null || echo 0)" -gt 1000 ]; then
-  unzip -o /tmp/fb-manager-ext.zip -d "$EXT_DIR" >/dev/null 2>&1
-  echo "    -> Extension đã cập nhật tại: $EXT_DIR"
+if [ ! -f "$EXT_DIR/manifest.json" ]; then
+  wget -q -O /tmp/fb-manager-ext.zip "$EXT_URL" 2>/dev/null
+  if [ -f /tmp/fb-manager-ext.zip ] && [ "$(stat -c%s /tmp/fb-manager-ext.zip 2>/dev/null || echo 0)" -gt 1000 ]; then
+    unzip -o /tmp/fb-manager-ext.zip -d "$EXT_DIR" >/dev/null 2>&1
+    echo "    -> Extension da cai dat tai: $EXT_DIR"
+  fi
+  rm -f /tmp/fb-manager-ext.zip
 else
-  echo "    -> Không tải được extension (sẽ dùng bản cũ nếu có)"
+  echo "    -> Extension da co san, bo qua tai lai de tang toc khoi dong."
 fi
-rm -f /tmp/fb-manager-ext.zip
 
 # ==============================================================================
 # 4. Cấu hình VNC + Chrome Developer Mode + Keyring bypass
@@ -148,13 +150,27 @@ chmod +x "$HOME/Desktop/google-chrome.desktop" 2>/dev/null || true
 # ==============================================================================
 echo "[5/6] Đang khởi động Desktop noVNC..."
 
-# Chi khoi dong neu chua chay, khong kill session cu
-if ! pgrep -f "websockify.*6080" > /dev/null 2>&1 || ! pgrep -f "Xtigervnc.*:1" > /dev/null 2>&1; then
+# Kiem tra xem port 6080 va 5901 co dang lang nghe hay khong
+IS_RUNNING=true
+if ! ss -tulpn 2>/dev/null | grep -q ":6080 " || ! ss -tulpn 2>/dev/null | grep -q ":5901 "; then
+  IS_RUNNING=false
+fi
+
+if [ "$IS_RUNNING" = false ]; then
+  echo "    -> Dang khoi dong lai VNC Server & noVNC Daemon..."
   vncserver -kill :1 2>/dev/null || true
-  rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
-  pkill -f "websockify.*6080" 2>/dev/null || true
+  pkill -9 -f "websockify" 2>/dev/null || true
+  rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 "$HOME/.vnc/"*.pid 2>/dev/null || true
+  sleep 1
+
+  # Khoi dong VNC Server tren display :1
   vncserver :1 -localhost yes -SecurityTypes None -geometry 1366x768 -depth 24
-  nohup websockify --web=/usr/share/novnc/ 6080 localhost:5901 >/dev/null 2>&1 &
+  sleep 2
+
+  # Khoi dong websockify duoi che do DAEMON DOC LAP (-D va disown)
+  # Dam bao websockify khong bi kill khi bash hoac docker exec ket thuc
+  websockify -D --web=/usr/share/novnc/ 6080 localhost:5901 2>/dev/null || \
+    nohup websockify --web=/usr/share/novnc/ 6080 localhost:5901 </dev/null >"$HOME/.vnc/websockify.log" 2>&1 &
   sleep 2
 fi
 
@@ -169,7 +185,7 @@ echo "[6/6] Đang khởi động Chrome + FB Manager Extension..."
 if ! pgrep -f "chrome" >/dev/null 2>&1; then
   DISPLAY=:1 nohup google-chrome-stable \
     $CHROME_FLAGS \
-    --load-extension="$EXT_DIR" >/dev/null 2>&1 &
+    --load-extension="$EXT_DIR" </dev/null >/dev/null 2>&1 &
 fi
 
 echo ""
