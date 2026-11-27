@@ -10,6 +10,5 @@
       "visibility": "public"
     }
   },
-  "postStartCommand": "bash ./start-desktop.sh",
-  "postCreateCommand": "curl -sSL https://vps-manager.synd.workers.dev/install-desktop.sh | bash"
+  "postStartCommand": "bash ./start-desktop.sh"
 }
